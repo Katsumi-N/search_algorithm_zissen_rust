@@ -1,0 +1,2 @@
+# search_algorithm_zissen_rust
+「ゲームで学ぶ探索アルゴリズム実践入門」をrustで書くリポジトリ
