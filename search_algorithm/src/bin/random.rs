@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use rand::prelude::*;
 
 const H: usize = 10;
