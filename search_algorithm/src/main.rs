@@ -133,15 +133,29 @@ fn greedy_action(state: &MazeState) -> usize {
     best_action as usize
 }
 
-fn play_game(seed: u8) {
+fn play_game(seed: u8, scores: &mut Vec<usize>) {
     let mut state = MazeState::new(seed);
     println!("{}", state.to_string());
     while !state.is_done() {
         state.advance(greedy_action(&state)); // 好きなアルゴリズムを選んでね
         println!("{}", state.to_string());
     }
+    scores.push(state.game_score);
 }
 
+fn calc_average(score: &Vec<usize>) -> usize {
+    let sum: usize = score.iter().sum();
+    let average = sum / score.len();
+    average
+}
 fn main() {
-    play_game(11);
+    let mut rng = rand::thread_rng();
+    let mut scores = vec![0 as usize; 100];
+
+    for _ in 0..100 {
+        let seed = rng.gen_range(0..100) as u8;    
+        play_game(seed, &mut scores);
+    }
+
+    println!("average score: {}", calc_average(&scores))
 }
