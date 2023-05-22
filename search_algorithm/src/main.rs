@@ -1,13 +1,14 @@
 use rand::prelude::*;
+use std::collections::BinaryHeap;
 
-const H: usize = 10;
-const W: usize = 10;
-const END_TURN: usize = 10;
+const H: usize = 30;
+const W: usize = 30;
+const END_TURN: usize = 100;
 const DX: [isize; 4] = [1, -1, 0, 0];
 const DY: [isize; 4] = [0, 0, 1, -1];
 const SCORE_TYPE: usize = 100000000;
 // 座標を保持する
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Ord, Eq, PartialOrd, PartialEq)]
 struct Coord {
     y: isize,
     x: isize,
@@ -23,13 +24,14 @@ impl Coord {
 // 1ターンに上下左右四方向のいずれかに1マスずつ進む。
 // 床にあるポイントを踏むと自身のスコアとなり、床のポイントが消える。
 // END_TURNの時点のスコアを高くすることが目的
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug, Ord, Eq, PartialOrd, PartialEq)]
 struct MazeState {
     points: [[usize; W]; H], // 床のポイントを1~9で表現する
     turn: usize,             // 現在のターン
     character: Coord,
     game_score: usize, // ゲーム上で実際に得たスコア
     evaluated_score: usize,
+    first_action: isize,
 }
 
 impl MazeState {
@@ -51,6 +53,7 @@ impl MazeState {
             character,
             game_score: 0,
             evaluated_score: 0,
+            first_action: -1,
         }
     }
 
@@ -109,11 +112,45 @@ impl MazeState {
     }
 }
 
-fn random_action(state: &MazeState) -> usize {
-    let legal_actions = state.legal_actions();
-    println!("legal: {:?}", legal_actions);
-    legal_actions[0]
+fn opeartor(maze1: &mut MazeState, maze2: &mut MazeState) -> bool {
+    maze1.evaluate_score() < maze2.evaluate_score()
 }
+
+fn beam_search_action(state: &MazeState, beam_width: usize, beam_depth: usize) -> usize {
+    let mut now_beam: BinaryHeap<MazeState> = BinaryHeap::new();
+    now_beam.push(*state);
+
+    let mut best_state = state.clone();
+
+    for t in 0..beam_depth {
+        let mut next_beam: BinaryHeap<MazeState> = BinaryHeap::new();
+        for _ in 0..beam_width {
+            if now_beam.is_empty() {
+                break;
+            }
+            let now_state = now_beam.pop().unwrap();
+            let legal_actions = now_state.legal_actions();
+            for action in legal_actions {
+                let mut next_state = now_state.clone();
+                next_state.advance(action);
+                next_state.evaluate_score();
+                if t == 0 {
+                    next_state.first_action = action as isize;
+                }
+                next_beam.push(next_state);
+            }
+        }
+
+        now_beam = next_beam;
+        best_state = now_beam.pop().unwrap();
+
+        if best_state.is_done() {
+            break;
+        }
+    }
+    best_state.first_action as usize
+}
+
 
 fn greedy_action(state: &MazeState) -> usize {
     let legal_actions = state.legal_actions();
@@ -137,7 +174,8 @@ fn play_game(seed: u8, scores: &mut Vec<usize>) {
     let mut state = MazeState::new(seed);
     println!("{}", state.to_string());
     while !state.is_done() {
-        state.advance(greedy_action(&state)); // 好きなアルゴリズムを選んでね
+        state.advance(beam_search_action(&state, 5, 2)); // ビームサーチ
+        // state.advance(greedy_action(&state));
         println!("{}", state.to_string());
     }
     scores.push(state.game_score);
@@ -153,7 +191,7 @@ fn main() {
     let mut scores = vec![0 as usize; 100];
 
     for _ in 0..100 {
-        let seed = rng.gen_range(0..100) as u8;    
+        let seed = rng.gen_range(0..100) as u8;
         play_game(seed, &mut scores);
     }
 
