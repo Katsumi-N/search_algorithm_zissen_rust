@@ -5,7 +5,6 @@ const W: usize = 10;
 const END_TURN: usize = 10;
 const DX: [isize; 4] = [1, -1, 0, 0];
 const DY: [isize; 4] = [0, 0, 1, -1];
-const SCORE_TYPE: usize = 100000000;
 // 座標を保持する
 #[derive(Clone, Debug)]
 struct Coord {

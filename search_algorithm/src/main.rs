@@ -7,7 +7,7 @@ const W: usize = 30;
 const END_TURN: usize = 100;
 const DX: [isize; 4] = [1, -1, 0, 0];
 const DY: [isize; 4] = [0, 0, 1, -1];
-const SCORE_TYPE: usize = 100000000;
+
 // 座標を保持する
 #[derive(Clone,Copy)]
 struct Coord {
@@ -133,47 +133,54 @@ impl MazeState {
     }
 }
 
-fn beam_search_action(state: &MazeState, beam_width: usize, beam_depth: usize) -> usize {
-    let mut now_beam: BinaryHeap<MazeState> = BinaryHeap::new();
-    now_beam.push(*state);
+fn chokudai_search_action(state: &MazeState, beam_width: usize, beam_depth: usize, beam_number: usize) -> usize {
+    let mut beam = vec![std::collections::BinaryHeap::new(); beam_depth + 1];
+    beam[0].push(state.clone());
 
-    let mut best_state = state.clone();
-
-    for t in 0..beam_depth {
-        let mut next_beam: BinaryHeap<MazeState> = BinaryHeap::new();
-        for _ in 0..beam_width {
-            if now_beam.is_empty() {
-                break;
-            }
-            let now_state = now_beam.pop().unwrap();
-            let legal_actions = now_state.legal_actions();
-            for action in legal_actions {
-                let mut next_state = now_state.clone();
-                next_state.advance(action);
-                next_state.evaluate_score();
-                if t == 0 {
-                    next_state.first_action = action as isize;
+    for _ in 0..beam_number {
+        for t in 0..beam_depth {
+            let mut now_beam = beam[t].clone();
+            let next_beam = &mut beam[t + 1];
+            
+            for _ in 0..beam_width {
+                if now_beam.is_empty() {
+                    break;
                 }
-                next_beam.push(next_state);
+
+                let now_state = now_beam.peek().unwrap().clone();
+                if now_state.is_done() {
+                    break;
+                }
+                now_beam.pop();
+                let legal_actions = now_state.legal_actions();
+                for action in legal_actions {
+                    let mut next_state = now_state.clone();
+                    next_state.advance(action);
+                    next_state.evaluate_score();
+                    if t == 0 {
+                        next_state.first_action = action as isize;
+                    }
+                    next_beam.push(next_state);
+                }
             }
-        }
-
-        now_beam = next_beam;
-        best_state = now_beam.pop().unwrap();
-
-        if best_state.is_done() {
-            break;
         }
     }
-    best_state.first_action as usize
+
+    for t in (0..beam_depth).rev() {
+        let now_beam = &beam[t];
+        if !now_beam.is_empty() {
+            return now_beam.peek().unwrap().first_action as usize;
+        }
+    }
+
+    0
 }
 
 fn play_game(seed: u8, scores: &mut Vec<usize>) {
     let mut state = MazeState::new(seed);
     println!("{}", state.to_string());
     while !state.is_done() {
-        state.advance(beam_search_action(&state, 5, 2)); // ビームサーチ
-        // state.advance(greedy_action(&state));
+        state.advance(chokudai_search_action(&state, 1, 2, 2)); // ビームサーチ
         println!("{}", state.to_string());
     }
     scores.push(state.game_score);
