@@ -1,5 +1,4 @@
 use rand::prelude::*;
-use std::collections::BinaryHeap;
 use std::cmp::Ordering;
 
 const H: usize = 30;
